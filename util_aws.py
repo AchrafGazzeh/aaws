@@ -990,7 +990,28 @@ def s3_load_file(s3_path: str,
 
 
 
+import os
+import subprocess
+import json
 
+
+def aws_log_fetch(dt_start, dt_end, logroup="",  dirout='mylog.csv'):
+   
+    # Construct the AWS CLI command to start the query with specified parameters
+    command = "aws logs start-query --log-group-name "+logroup+" --start-time "+dt_start+" --end-time "+dt_end+" --query-string \"fields @timestamp, @message | filter @logStream like 'my-log-stream' | fields time,log # , tomillis(@timestamp) as millis | filter log like 'CKS;' | limit 1000\""
+    
+    # Run the command in the shell and capture the output
+    output = subprocess.check_output(command, shell=True)
+    
+    # Parse the JSON output to extract the query ID
+    data = json.loads(output)
+    query_id=data['queryId']
+    
+    # Construct the AWS CLI command to get the query results and save them to a file
+    command = 'aws logs get-query-results --query-id "' + query_id + '" | jq -r \'.results[] | map(.value) | @csv\' > "' + dirout + '"'
+    
+    # Run the command in the shell to save the results to a file  
+    os.system(command)
 
 ############################################################################################################
 if __name__ == '__main__':
